@@ -1,0 +1,141 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: task-devops
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: us-east-1
+
+resources:
+  Resources:
+    # S3 Bucket for Frontend
+    WebAppBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        WebsiteConfiguration:
+          IndexDocument: index.html
+
+    # CloudFront Distribution for Frontend
+    WebAppDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: !GetAtt WebAppBucket.DomainName
+              Id: S3Origin
+          Enabled: 'true'
+          DefaultRootObject: index.html
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: 'true'
+          DefaultCacheBehavior:
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+
+    # API Gateway and Lambda for Backend
+    ApiGateway:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: MyApi
+
+    ApiGatewayResource:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !GetAtt ApiGateway.RootResourceId
+        RestApiId: !Ref ApiGateway
+        PathPart: 'getData'
+
+    ApiGatewayMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId: !Ref ApiGateway
+        ResourceId: !Ref ApiGatewayResource
+        HttpMethod: GET
+        AuthorizationType: NONE
+        Integration:
+          Type: AWS_PROXY
+          IntegrationHttpMethod: POST
+          Uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${LambdaGetData.Arn}/invocations
+
+    LambdaGetData:
+      Type: AWS::Lambda::Function
+      Properties:
+        Handler: functions/getData.handler
+        Role: arn:aws:iam::123456789012:role/lambda-execution-role
+        FunctionName: getData
+        Code:
+          S3Bucket: my-lambda-functions
+          S3Key: getData.zip
+        Runtime: nodejs14.x
+
+
+    # RDS Proxy (Optional)
+    RDSProxy:
+      Type: AWS::RDS::DBProxy
+      Properties:
+        Auth: 
+          Description: "Proxy for Aurora Serverless"
+          AuthScheme: SECRETS
+          SecretArn: 
+            Ref: DatabasePassword
+          IAMAuth: DISABLED
+        DbProxyName: MyRDSProxy
+        EngineFamily: POSTGRESQL
+        RoleArn: arn:aws:iam::123456789012:role/rds-proxy-role
+
+    # VPC Setup
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: "10.0.0.0/16"
+
+    Subnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        CidrBlock: "10.0.1.0/24"
+        AvailabilityZone: us-east-1a
+
+    Subnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        CidrBlock: "10.0.2.0/24"
+        AvailabilityZone: us-east-1b
+
+    BastionHostSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Security Group for Bastion Host
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: "0.0.0.0/0"
+        SecurityGroupEgress:
+          - IpProtocol: '-1'
+            CidrIp: "0.0.0.0/0"
+
+    BastionHost:
+      Type: AWS::EC2::Instance
+      Properties:
+        InstanceType: t2.micro
+        KeyName: my-key-pair
+        SecurityGroupIds:
+          - !Ref BastionHostSecurityGroup
+        SubnetId: !Ref Subnet1
+        ImageId: ami-0c55b159cbfafe1f0
+
+
