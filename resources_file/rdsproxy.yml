@@ -1,0 +1,22 @@
+Resources:
+  TestSaileshRDSProxy:
+    Type: AWS::RDS::DBProxy
+    DependsOn:
+      - TestSaileshAuroraDBCluster
+      - TestSaileshAuoraDBInstance
+    Properties:
+      Auth: 
+        - Description: "Proxy for Aurora Serverless"
+          AuthScheme: SECRETS
+          SecretArn: 
+            Ref: DatabasePassword
+      DBProxyName: TestSaileshRDSProxy
+      EngineFamily: POSTGRESQL
+      RoleArn: arn:aws:iam::287655590105:role/rds-execution-policy
+      VpcSubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+
+      VpcSecurityGroupIds: 
+        - !Ref TestSaileshDBSecurityGroup

@@ -1,0 +1,5 @@
+Resources:
+  TestSaileshAPIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: ${self:custom.ServiceName}-API

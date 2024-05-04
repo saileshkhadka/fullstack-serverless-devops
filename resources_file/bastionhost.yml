@@ -1,0 +1,36 @@
+Resources:
+  BastionHsotSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      GroupName: "${self:custom.ServiceName}-bastion-host-securitygroup"
+      GroupDescription: Allow SSH and HTTP inbound traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: ${self:custom.InstanceType}
+      ImageId: ${self:custom.ImageId}
+      KeyName: !Ref BastionKeyPairName
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref BastionHsotSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "${self:custom.ServiceName}-bastion-host"
+
+  BastionKeyPairName:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: "${self:custom.ServiceName}-test-key"
+      KeyFormat: pem 
+      KeyType: rsa      

@@ -1,0 +1,83 @@
+Resources:
+  TestSaileshAuroraDBCluster:
+    DependsOn:
+      - TestSaileshDBClusterGroup
+      - TestSaileshDBSecurityGroup
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      DatabaseName: "{{resolve:secretsmanager:${DatabasePassword}::db_name}}"
+      MasterUsername: 
+        Fn::Sub: "{{resolve:secretsmanager:${DatabasePassword}::username}}"
+      MasterUserPassword:
+        Fn::Sub: "{{resolve:secretsmanager:${DatabasePassword}::password}}"
+      BackupRetentionPeriod: 7
+      Port: 5432
+      DBClusterParameterGroupName:
+        Ref: TestSaileshDBClusterGroup
+      VpcSecurityGroupIds:
+      - !Ref TestSaileshDBSecurityGroup
+      DBSubnetGroupName: !Ref TestSaileshDBSubnetGroup
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: ${self:custom.DBMinCapacity}
+        MaxCapacity: ${self:custom.DBMaxCapacity}
+
+
+  TestSaileshAuoraDBInstance:
+    DependsOn: TestSaileshAuroraDBCluster
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: ${self:custom.ServiceName}-db-instance
+      AvailabilityZone: ${self:provider.region}a
+      DBInstanceClass: db.serverless 
+      DBSubnetGroupName:
+        Ref: TestSaileshDBSubnetGroup
+      Engine: aurora-postgresql
+      PubliclyAccessible: false
+      DBParameterGroupName:
+        Ref: TestSaileshDBInstanceParameterGroup
+      DBClusterIdentifier:
+        Ref: TestSaileshAuroraDBCluster
+
+
+  TestSaileshDBClusterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: "Cluster parameter group for Aurora"
+      DBClusterParameterGroupName: "${self:custom.ServiceName}-db-cluster-pg"
+      Family: aurora-postgresql15
+      Parameters:
+        max_connections: 1000
+        log_statement: all
+        shared_preload_libraries: pg_stat_statements
+
+
+  TestSaileshDBInstanceParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      DBParameterGroupName: "${self:custom.ServiceName}-db-instance-pg"
+      Description: Parameter group for the Serverless Aurora RDS DB.
+      Family: aurora-postgresql15
+      Parameters:
+          shared_preload_libraries: "pg_stat_statements"      
+
+  TestSaileshDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for RDS Aurora PostgreSQL"
+      DBSubnetGroupName: "${self:custom.ServiceName}-db-subnet-group"
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+
+  DatabasePassword:  
+    Type: "AWS::SecretsManager::Secret"
+    Properties:
+      Name: "DatabasePassword"
+      Description: "Password for Aurora Serverless PostgreSQL database"
+      SecretString: !Sub
+        - '{"username": "${Username}", "password":"${Password}", "db_name":"${DBName}"}'
+        - Username: "testsailesh"
+          Password: "Test@2024!"
+          DBName: "testsaileshdb"

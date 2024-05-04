@@ -2,13 +2,13 @@ const AWS = require('aws-sdk');
 const { Client } = require('pg');
 
 exports.handler = async (event) => {
-    const secretName = "arn:aws:secretsmanager:us-east-1:287655590105:secret:DatabasePassword-GEDTJnV2cYE0-4e4w1z";
+    const secretName = "arn:aws:secretsmanager:us-east-1:287655590105:secret:DatabasePassword-L1jyHO";
     const region = "us-east-1";
     const secret = await getSecret(secretName, region);
     const client = new Client({
-        user: "taskdevops",
+        user: "testsailesh",
         host: secret.host,
-        database: "taskDevOps",
+        database: "testsaileshdb",
         password: secret.password,
         port: 5432
     });

@@ -1,0 +1,5 @@
+VPC_CIDR: "10.0"
+InstanceType: "t2.micro"
+ImageId: "ami-04b70fa74e45c3917"
+DBMinCapacity: 2
+DBMaxCapacity: 4

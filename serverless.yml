@@ -11,131 +11,52 @@
 #
 # Happy Coding!
 
-service: task-devops
+service: test-project-sailesh
+frameworkVersion: "3"
 
 provider:
   name: aws
-  runtime: nodejs14.x
+  runtime: nodejs20.x
+  stage: dev
   region: us-east-1
 
+functions:
+  testSaileshLambdaFunction:
+    name: handler-function
+    handler: handler.handler
+    role: arn:aws:iam::287655590105:role/lambda-execution-role 
+    runtime: nodejs20.x
+    memorySize: 128
+    timeout: 30
+    events:
+      - http:
+          path: 'handler.js'
+          method: get
+    package:
+      individually: true
+      bucket: my-devops-task-bucket
+      artifact: handler.zip
+
+
+
+custom:
+  stage: "dev"
+  ServiceName: "${self:custom.stage}-sls"
+  config_file: ${file(./resources_file/config_file/config.yml)}
+  VPC_CIDR: ${self:custom.config_file.VPC_CIDR}
+  DBMinCapacity: ${self:custom.config_file.DBMinCapacity}
+  DBMaxCapacity: ${self:custom.config_file.DBMaxCapacity}
+  ImageId: ${self:custom.config_file.ImageId}
+  InstanceType: ${self:custom.config_file.InstanceType}
+  S3BucketName: ${self:custom.ServiceName}-sailesh-bucket
+
+
 resources:
-  Resources:
-    # S3 Bucket for Frontend
-    WebAppBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        WebsiteConfiguration:
-          IndexDocument: index.html
-
-    # CloudFront Distribution for Frontend
-    WebAppDistribution:
-      Type: AWS::CloudFront::Distribution
-      Properties:
-        DistributionConfig:
-          Origins:
-            - DomainName: !GetAtt WebAppBucket.DomainName
-              Id: S3Origin
-          Enabled: 'true'
-          DefaultRootObject: index.html
-          ViewerCertificate:
-            CloudFrontDefaultCertificate: 'true'
-          DefaultCacheBehavior:
-            TargetOriginId: S3Origin
-            ViewerProtocolPolicy: redirect-to-https
-
-    # API Gateway and Lambda for Backend
-    ApiGateway:
-      Type: AWS::ApiGateway::RestApi
-      Properties:
-        Name: MyApi
-
-    ApiGatewayResource:
-      Type: AWS::ApiGateway::Resource
-      Properties:
-        ParentId: !GetAtt ApiGateway.RootResourceId
-        RestApiId: !Ref ApiGateway
-        PathPart: 'getData'
-
-    ApiGatewayMethod:
-      Type: AWS::ApiGateway::Method
-      Properties:
-        RestApiId: !Ref ApiGateway
-        ResourceId: !Ref ApiGatewayResource
-        HttpMethod: GET
-        AuthorizationType: NONE
-        Integration:
-          Type: AWS_PROXY
-          IntegrationHttpMethod: POST
-          Uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${LambdaGetData.Arn}/invocations
-
-    LambdaGetData:
-      Type: AWS::Lambda::Function
-      Properties:
-        Handler: functions/getData.handler
-        Role: arn:aws:iam::123456789012:role/lambda-execution-role
-        FunctionName: getData
-        Code:
-          S3Bucket: my-lambda-functions
-          S3Key: getData.zip
-        Runtime: nodejs14.x
-
-
-    # RDS Proxy (Optional)
-    RDSProxy:
-      Type: AWS::RDS::DBProxy
-      Properties:
-        Auth: 
-          Description: "Proxy for Aurora Serverless"
-          AuthScheme: SECRETS
-          SecretArn: 
-            Ref: DatabasePassword
-          IAMAuth: DISABLED
-        DbProxyName: MyRDSProxy
-        EngineFamily: POSTGRESQL
-        RoleArn: arn:aws:iam::123456789012:role/rds-proxy-role
-
-    # VPC Setup
-    VPC:
-      Type: AWS::EC2::VPC
-      Properties:
-        CidrBlock: "10.0.0.0/16"
-
-    Subnet1:
-      Type: AWS::EC2::Subnet
-      Properties:
-        VpcId: !Ref VPC
-        CidrBlock: "10.0.1.0/24"
-        AvailabilityZone: us-east-1a
-
-    Subnet2:
-      Type: AWS::EC2::Subnet
-      Properties:
-        VpcId: !Ref VPC
-        CidrBlock: "10.0.2.0/24"
-        AvailabilityZone: us-east-1b
-
-    BastionHostSecurityGroup:
-      Type: AWS::EC2::SecurityGroup
-      Properties:
-        GroupDescription: Security Group for Bastion Host
-        VpcId: !Ref VPC
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: 22
-            ToPort: 22
-            CidrIp: "0.0.0.0/0"
-        SecurityGroupEgress:
-          - IpProtocol: '-1'
-            CidrIp: "0.0.0.0/0"
-
-    BastionHost:
-      Type: AWS::EC2::Instance
-      Properties:
-        InstanceType: t2.micro
-        KeyName: my-key-pair
-        SecurityGroupIds:
-          - !Ref BastionHostSecurityGroup
-        SubnetId: !Ref Subnet1
-        ImageId: ami-0c55b159cbfafe1f0
-
+  - ${file(./resources_file/vpc.yml)}
+  - ${file(./resources_file/api.yml)}
+  - ${file(./resources_file/bastionhost.yml)}
+  - ${file(./resources_file/cloudfront.yml)}
+  - ${file(./resources_file/db.yml)}
+  - ${file(./resources_file/rdsproxy.yml)}
+  - ${file(./resources_file/s3.yml)}
 

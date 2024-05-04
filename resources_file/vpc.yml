@@ -1,0 +1,240 @@
+Resources:
+  TestSaileshVPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: ${self:custom.VPC_CIDR}.0.0/16
+        Tags: 
+          - 
+            Key: "Name"
+            Value: "${self:custom.ServiceName}-VPC"
+  
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      CidrBlock: ${self:custom.VPC_CIDR}.1.0/24
+      AvailabilityZone: ${self:provider.region}a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-PublicSubnet1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      CidrBlock: ${self:custom.VPC_CIDR}.2.0/24
+      AvailabilityZone: ${self:provider.region}b
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-PublicSubnet2
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      CidrBlock: ${self:custom.VPC_CIDR}.3.0/24
+      AvailabilityZone: ${self:provider.region}c
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-PublicSubnet3
+    
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      CidrBlock: ${self:custom.VPC_CIDR}.4.0/24
+      AvailabilityZone: ${self:provider.region}a
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-PrivateSubnet1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      CidrBlock: ${self:custom.VPC_CIDR}.5.0/24
+      AvailabilityZone: ${self:provider.region}b
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-PrivateSubnet2
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      CidrBlock: ${self:custom.VPC_CIDR}.6.0/24
+      AvailabilityZone: ${self:provider.region}c
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-PrivateSubnet3
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-public-route-table
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: TestSaileshVPC
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-private-route-table-1
+  
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: TestSaileshVPC
+      Tags:
+        - Key: Name
+          Value: ${self:custom.ServiceName}-private-route-table-2
+
+  PublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetRouteTableAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable1
+      SubnetId:
+        Ref: PrivateSubnet1
+
+  PrivateSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable2
+      SubnetId:
+        Ref: PrivateSubnet2
+
+  PrivateSubnetRouteTableAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable2
+      SubnetId:
+        Ref: PrivateSubnet3
+
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "${self:custom.ServiceName}-internet-gateway"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TestSaileshVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  ElasticIP1:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags: 
+      - 
+        Key: "Name"
+        Value: "${self:custom.ServiceName}-elasticip-1"
+
+  NATGateway1:          
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIP1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "${self:custom.ServiceName}-nat-gateway-1"
+
+  ElasticIP2:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags: 
+      - 
+        Key: "Name"
+        Value: "${self:custom.ServiceName}-elasticip-2"
+
+  NATGateway2:          
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIP2.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "${self:custom.ServiceName}-nat-gateway-2"
+
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NATGateway1 
+
+  PrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NATGateway2
+
+  TestSaileshDBSecurityGroup:
+    DependsOn: TestSaileshVPC
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "${self:custom.ServiceName}-db-securitygroup"
+      GroupDescription: SecurityGroup for DB
+      VpcId:
+        Ref: TestSaileshVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          CidrIp: ${self:custom.VPC_CIDR}.4.0/24
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          CidrIp: ${self:custom.VPC_CIDR}.5.0/24
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          CidrIp: ${self:custom.VPC_CIDR}.6.0/24
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "${self:custom.ServiceName}-db-securitygroup"
