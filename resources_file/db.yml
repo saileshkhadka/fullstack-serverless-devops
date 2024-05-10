@@ -3,14 +3,16 @@ Resources:
     DependsOn:
       - TestSaileshDBClusterGroup
       - TestSaileshDBSecurityGroup
+      - DBSecret
     Type: AWS::RDS::DBCluster
     Properties:
+      DBClusterIdentifier: ${self:custom.ServiceName}-db-cluster
       Engine: aurora-postgresql
-      DatabaseName: "{{resolve:secretsmanager:${DatabasePassword}::db_name}}"
+      DatabaseName: testsaileshdb
       MasterUsername: 
-        Fn::Sub: "{{resolve:secretsmanager:${DatabasePassword}::username}}"
+        Fn::Sub: "{{resolve:secretsmanager:${DBSecret}::username}}"
       MasterUserPassword:
-        Fn::Sub: "{{resolve:secretsmanager:${DatabasePassword}::password}}"
+        Fn::Sub: "{{resolve:secretsmanager:${DBSecret}::password}}"
       BackupRetentionPeriod: 7
       Port: 5432
       DBClusterParameterGroupName:
@@ -70,14 +72,3 @@ Resources:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
         - !Ref PrivateSubnet3
-
-  DatabasePassword:  
-    Type: "AWS::SecretsManager::Secret"
-    Properties:
-      Name: "DatabasePassword"
-      Description: "Password for Aurora Serverless PostgreSQL database"
-      SecretString: !Sub
-        - '{"username": "${Username}", "password":"${Password}", "db_name":"${DBName}"}'
-        - Username: "testsailesh"
-          Password: "Test@2024!"
-          DBName: "testsaileshdb"

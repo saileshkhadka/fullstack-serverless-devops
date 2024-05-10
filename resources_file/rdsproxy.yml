@@ -4,15 +4,17 @@ Resources:
     DependsOn:
       - TestSaileshAuroraDBCluster
       - TestSaileshAuoraDBInstance
+      - DBSecret
+      - TestSaileshRDSProxyRole
     Properties:
       Auth: 
         - Description: "Proxy for Aurora Serverless"
           AuthScheme: SECRETS
           SecretArn: 
-            Ref: DatabasePassword
+            Ref: DBSecret
       DBProxyName: TestSaileshRDSProxy
       EngineFamily: POSTGRESQL
-      RoleArn: arn:aws:iam::287655590105:role/rds-execution-policy
+      RoleArn: !GetAtt TestSaileshRDSProxyRole.Arn
       VpcSubnetIds: 
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2

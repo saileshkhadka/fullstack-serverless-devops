@@ -1,0 +1,46 @@
+Resources:
+  HelloLambdaErrorFilter:
+    Type: "AWS::Logs::MetricFilter"
+    Properties:
+      LogGroupName: "/aws/lambda/dev-sls-lambda-hello-function"
+      FilterPattern: "error" 
+      MetricTransformations:
+        - MetricValue: "1"
+          MetricNamespace: "Logs"
+          MetricName: "HelloLambdaFunctionErrorCount"
+
+  HelloLambdaErrorAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "${self:custom.ServiceName}-lambda-hello-function-error"
+      AlarmDescription: "Alarm for Error on Hello Lambda Function"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlertNotification  
+      MetricName: "HelloLambdaFunctionErrorCount"
+      Namespace: "Logs"
+      Statistic: "Sum"
+      Period: 10 
+      EvaluationPeriods: 1
+      Threshold: 1  
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
+
+  HelloLambdaDurationAlarm:
+    DependsOn: AlertNotification  
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: "${self:custom.ServiceName}-lambda-hello-function-duration"
+      AlarmDescription: "Alarm for Hello Lambda Function Duration"
+      Namespace: "AWS/Lambda"
+      MetricName: "Duration"
+      Dimensions:
+        - Name: "FunctionName"
+          Value: "${self:custom.stage}-sls-lambda-hello-function"
+      ComparisonOperator: "GreaterThanThreshold"
+      EvaluationPeriods: 1
+      Period: 30  
+      Statistic: "Sum"
+      Threshold: 12000  
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlertNotification  

@@ -1,9 +1,9 @@
-name: Deploy Microservice Architecture with serverless
+name: Deploy microservice architecture with serverless using ci/cd
 
 on:
   push:
     branches:
-      - master
+      - sailesh-test
 
 jobs:
   deploy:
@@ -18,7 +18,7 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Serverless Framework
+    - name: Install necessary package for npm and Serverless Framework
       run: npm install -g serverless
 
     - name: Deploy with Serverless Framework
@@ -26,4 +26,5 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: us-east-1
+        STAGE: 'dev'
       run: serverless deploy

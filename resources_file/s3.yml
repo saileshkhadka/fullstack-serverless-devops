@@ -3,3 +3,26 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: ${self:custom.S3BucketName}
+
+
+  TaskBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:custom.TaskBucketName}  
+      AccessControl: Private      
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  AccessLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "${self:custom.ServiceName}-log"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: ObjectWriter             

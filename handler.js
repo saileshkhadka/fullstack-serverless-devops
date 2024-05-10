@@ -1,40 +1,63 @@
 const AWS = require('aws-sdk');
 const { Client } = require('pg');
 
-exports.handler = async (event) => {
-    const secretName = "arn:aws:secretsmanager:us-east-1:287655590105:secret:DatabasePassword-L1jyHO";
-    const region = "us-east-1";
-    const secret = await getSecret(secretName, region);
-    const client = new Client({
-        user: "testsailesh",
-        host: secret.host,
-        database: "testsaileshdb",
-        password: secret.password,
-        port: 5432
+exports.handler = async (event, context) => {
+    const secretName = "dev-sls-DBSecret";
+    const regionName = "us-east-1";
+    
+    const secretsManagerClient = new AWS.SecretsManager({
+        region: regionName
     });
-
-    await client.connect();
-
-    const res = await client.query('SELECT * FROM mytable');
-
-    await client.end();
-
-    const response = {
-        statusCode: 200,
-        body: JSON.stringify(res.rows),
-    };
-
-    return response;
-};
-
-const getSecret = async (secretName, region) => {
-    const secretsManager = new AWS.SecretsManager({ region: region });
-    const data = await secretsManager.getSecretValue({ SecretId: secretName }).promise();
-
-    if ('SecretString' in data) {
-        return JSON.parse(data.SecretString);
-    } else {
-        const buff = new Buffer(data.SecretBinary, 'base64');
-        return JSON.parse(buff.toString('ascii'));
+    
+    const secretPromise = secretsManagerClient.getSecretValue({ SecretId: secretName }).promise();
+    
+    let secretData;
+    try {
+        const secret = await secretPromise;
+        secretData = JSON.parse(secret.SecretString);
+    } catch (error) {
+        console.error("Error retrieving secret:", error);
+        throw error;
     }
+    
+    const dbOptions = {
+        host: "testsaileshrdsproxy.proxy-crtlme88jyeh.us-east-1.rds.amazonaws.com",
+        port: 5432,
+        database: "testsaileshdb",
+        user: secretData.username,
+        password: secretData.password,
+        ssl: {
+            rejectUnauthorized: false
+        }
+    };
+    
+    const client = new Client(dbOptions);
+
+    try {
+        await client.connect();
+        console.log("Connected to Aurora PostgreSQL database");
+    } catch (error) {
+        console.error("Error connecting to Aurora PostgreSQL database:", error);
+        throw error;
+    }
+    
+
+    const query = "SELECT * FROM mytable;";
+    let results;
+    try {
+        const res = await client.query(query);
+        results = res.rows;
+        console.log("Data fetched successfully:", results);
+
+    } catch (error) {
+        console.error("Error executing SQL query:", error);
+        throw error;
+    } finally {
+        await client.end();
+    }
+    
+    return {
+        statusCode: 200,
+        body: JSON.stringify('Data fetched successfully')
+    };
 };

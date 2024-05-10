@@ -18,3 +18,95 @@ Resources:
             QueryString: false
           ViewerProtocolPolicy: redirect-to-https
         DefaultRootObject: index.html
+
+
+  TaskCloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment:
+          Fn::Join:
+          - ''
+          - - access-identity-
+            - ${self:custom.TaskBucketName}
+            - ".s3.amazonaws.com"
+
+
+  TaskCloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Description: "origin access control(OAC) for allowing cloudfront to access S3 bucket"
+        Name: "${self:custom.ServiceName}--Task-OAC"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4 
+
+
+  TaskCDN:
+    Type: AWS::CloudFront::Distribution
+    DependsOn:
+      - TaskBucket
+      - AccessLogBucket
+    Properties:
+      DistributionConfig:
+        Comment: ${self:custom.TaskDomainName}
+        PriceClass: PriceClass_100        
+        Origins:
+          - DomainName: "${self:custom.TaskBucketName}.s3.${self:provider.region}.amazonaws.com"   
+            Id: s3origin
+            S3OriginConfig:
+              OriginAccessIdentity: ""            
+            OriginAccessControlId: !GetAtt TaskCloudFrontOriginAccessControl.Id
+        Enabled: "true"
+        DefaultRootObject: index.html
+        Logging:
+          Bucket: !GetAtt AccessLogBucket.DomainName  
+          Prefix: CloudfrontLogs/Task/
+          IncludeCookies: false         
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10            
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10  
+        HttpVersion: http2
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          TargetOriginId: s3origin
+          ForwardedValues:
+            QueryString: "false"
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+
+
+  TaskCfnBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: ${self:custom.TaskBucketName} 
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: "arn:aws:s3:::${self:custom.TaskBucketName}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: 
+                  Fn::Join:
+                  - ''
+                  - - 'arn:aws:cloudfront::'
+                    - !Sub '${AWS::AccountId}'  
+                    - ':distribution/'
+                    - !Sub '${TaskCDN}'    
+
+        

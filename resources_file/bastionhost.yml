@@ -1,4 +1,17 @@
 Resources:
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: ${self:custom.InstanceType}
+      ImageId: ${self:custom.ImageId}
+      KeyName: !Ref BastionKeyPairName
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref BastionHsotSecurityGroup
+      Tags:
+        - Key: Name
+          Value: "${self:custom.ServiceName}-bastion-host"
+          
   BastionHsotSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -14,19 +27,6 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-
-  BastionHost:
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: ${self:custom.InstanceType}
-      ImageId: ${self:custom.ImageId}
-      KeyName: !Ref BastionKeyPairName
-      SubnetId: !Ref PublicSubnet1
-      SecurityGroupIds:
-        - !Ref BastionHsotSecurityGroup
-      Tags:
-        - Key: Name
-          Value: "${self:custom.ServiceName}-bastion-host"
 
   BastionKeyPairName:
     Type: AWS::EC2::KeyPair

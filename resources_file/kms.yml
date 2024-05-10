@@ -1,0 +1,42 @@
+Resources:
+  LambdaEnvKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "KMS key for adding on lambda environment"
+      EnableKeyRotation: true 
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: ${self:custom.ServiceName}-lambda-env-key-policy
+        Statement:
+          - Sid: Allow root AWS account full access
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: '*'
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey
+              - kms:DescribeKey
+              - kms:Get*
+              - kms:List*
+              - kms:CreateKey
+              - kms:Describe*
+            Resource: "*"
+            Condition:
+              StringEquals:
+                "kms:ViaService": "rds.us-east-1.amazonaws.com"
+                "kms:CallerAccount": !Sub "${AWS::AccountId}"            
+
+  LambdaEnvKMSKeyAlias:
+    DependsOn:
+      - LambdaEnvKMSKey    
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${self:custom.ServiceName}-lambda-env-key"
+      TargetKeyId: !Ref LambdaEnvKMSKey

@@ -238,3 +238,20 @@ Resources:
         - 
           Key: "Name"
           Value: "${self:custom.ServiceName}-db-securitygroup"
+
+
+  LambdaSecurityGroup:
+    DependsOn: TestSaileshVPC
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "${self:custom.ServiceName}-TestSaileshlambda-sg"
+      GroupDescription: SecurityGroup for Serverless Functions
+      VpcId:
+        Ref: TestSaileshVPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "${self:custom.ServiceName}-TestSaileshlambda-sg"

@@ -1,0 +1,6 @@
+Resources:
+  AlertNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ${self:custom.ServiceName}-alert
+      DisplayName: "Test-Sailesh-Project-Alert"

@@ -17,30 +17,71 @@ frameworkVersion: "3"
 provider:
   name: aws
   runtime: nodejs20.x
-  stage: dev
+  stage: ${env:STAGE, 'dev'}
   region: us-east-1
+  vpc:
+    securityGroupIds:
+      - Fn::GetAtt: [ LambdaSecurityGroup, GroupId ]
+    subnetIds:
+      - Fn::GetAtt: [ PrivateSubnet1, SubnetId ]
+      - Fn::GetAtt: [ PrivateSubnet2, SubnetId ]
+      - Fn::GetAtt: [ PrivateSubnet3, SubnetId ]
+
+  environment:
+    KMS_ENV_ID: !Ref LambdaEnvKMSKey
 
 functions:
   testSaileshLambdaFunction:
-    name: handler-function
+    name: ${self:custom.stage}-sls-lambda-handler-function
     handler: handler.handler
-    role: arn:aws:iam::287655590105:role/lambda-execution-role 
+    role: !GetAtt LambdaExecutionRole.Arn 
     runtime: nodejs20.x
-    memorySize: 128
+    memorySize: 1024
     timeout: 30
     events:
       - http:
-          path: 'handler.js'
+          path: 'handler'
           method: get
     package:
       individually: true
-      bucket: my-devops-task-bucket
-      artifact: handler.zip
+      patterns:
+        - '!resources_file/**'
+    vpc:
+      securityGroupIds:
+        - !Ref LambdaSecurityGroup
+      subnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
 
+  helloLambdaFunction:
+    name: ${self:custom.stage}-sls-lambda-hello-function
+    handler: hello.handler
+    role: !GetAtt helloLambdaRole.Arn
+    runtime: nodejs20.x
+    memorySize: 1024
+    timeout: 30
+    environment:
+      KMS_ENV_ID: !Ref LambdaEnvKMSKey
+    events:
+      - http:
+          path: 'hello'
+          method: get
+    package:
+      individually: true
+      patterns:
+        - '!resources_file/**'
+    vpc:
+      securityGroupIds:
+        - !Ref LambdaSecurityGroup
+      subnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
 
 
 custom:
-  stage: "dev"
+  stage: ${env:STAGE, 'dev'}
   ServiceName: "${self:custom.stage}-sls"
   config_file: ${file(./resources_file/config_file/config.yml)}
   VPC_CIDR: ${self:custom.config_file.VPC_CIDR}
@@ -49,6 +90,8 @@ custom:
   ImageId: ${self:custom.config_file.ImageId}
   InstanceType: ${self:custom.config_file.InstanceType}
   S3BucketName: ${self:custom.ServiceName}-sailesh-bucket
+  TaskBucketName: ${self:custom.ServiceName}-task-bucket
+  TaskDomainName: "${self:custom.ServiceName}-task"
 
 
 resources:
@@ -56,7 +99,12 @@ resources:
   - ${file(./resources_file/api.yml)}
   - ${file(./resources_file/bastionhost.yml)}
   - ${file(./resources_file/cloudfront.yml)}
+  - ${file(./resources_file/secrets.yml)}
   - ${file(./resources_file/db.yml)}
   - ${file(./resources_file/rdsproxy.yml)}
   - ${file(./resources_file/s3.yml)}
+  - ${file(./resources_file/iam.yml)}
+  - ${file(./resources_file/kms.yml)}
+  - ${file(./resources_file/lambdaalerts.yml)}
+  - ${file(./resources_file/alerts.yml)}
 
